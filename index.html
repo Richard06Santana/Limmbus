@@ -2,11 +2,10 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <title>Controle de Saída - V 1.5.2</title>
+    <title>Controle de Saída - V 1.5.4</title>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
     <style>
-        /* Estilo Minimalista Geométrico - Dark Mode V 1.5.2 */
         * { box-sizing: border-box; }
         body { 
             background-color: #0a0a0a; 
@@ -19,7 +18,6 @@
             min-height: 100vh;
             margin: 0;
         }
-
         .container { 
             background: #121212; 
             padding: 40px; 
@@ -28,7 +26,6 @@
             border: 1px solid #333; 
             box-shadow: 12px 12px 0px #1a1a1a;
         }
-
         h2 { 
             margin: 0 0 20px 0; 
             border-left: 5px solid #fff; 
@@ -38,19 +35,15 @@
             letter-spacing: 2px;
             font-size: 1.4rem;
         }
-
         label { display: block; font-size: 0.85rem; margin-top: 20px; color: #888; }
-
         input, textarea { 
             width: 100%; padding: 12px; margin-top: 8px; 
             border: 1px solid #333; background: #1a1a1a;
             color: #fff; outline: none;
         }
         input:focus, textarea:focus { border-color: #fff; }
-
         .row { display: flex; gap: 15px; }
         .row div { flex: 1; }
-
         button { 
             width: 100%; margin-top: 30px; padding: 15px; 
             background: #fff; color: #000; border: none; 
@@ -58,9 +51,7 @@
             text-transform: uppercase;
         }
         button:hover { background: #ccc; }
-
         .status-msg { margin-top: 15px; font-size: 0.8rem; color: #2ecc71; opacity: 0; transition: 0.5s; height: 20px; text-align: center; }
-
         .link-tabela {
             margin-top: 20px;
             color: #666;
@@ -78,10 +69,8 @@
     <form id="formLimmbus">
         <label>Nome do funcionário</label>
         <input type="text" id="nome" class="tab-input" placeholder="Nome completo" required autofocus>
-
         <label>Data</label>
         <input type="date" id="data" class="tab-input" required>
-
         <div class="row">
             <div>
                 <label>Entrada</label>
@@ -92,10 +81,8 @@
                 <input type="time" id="saida" class="tab-input" required>
             </div>
         </div>
-
         <label>Descrição ou Observações</label>
         <textarea id="descricao" class="tab-input" rows="2" placeholder="Escreva os detalhes aqui..."></textarea>
-
         <button type="submit" id="btnSalvar">Salvar no Firebase</button>
         <div id="msgSucesso" class="status-msg">Sincronizado com a nuvem!</div>
     </form>
@@ -104,7 +91,6 @@
 <div onclick="abrirTabela()" class="link-tabela">Acessar log de alterações (Nuvem)</div>
 
 <script>
-    // Configuração oficial que você enviou
     const firebaseConfig = {
         apiKey: "AIzaSyA4AFbehMGUY0D0-j5hIjLcalhirQYlCN4",
         authDomain: "projeto-frutiger.firebaseapp.com",
@@ -114,27 +100,21 @@
         appId: "1:574572027554:web:7946825d87e03781f401fb"
     };
 
-    // Inicializa o Firebase e o Banco Firestore
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
 
-    // Navegação com a tecla Enter
     const inputs = document.querySelectorAll('.tab-input');
     inputs.forEach((input, index) => {
         input.addEventListener('keydown', (e) => {
             if (e.key === 'Enter') {
                 e.preventDefault();
                 const nextInput = inputs[index + 1];
-                if (nextInput) {
-                    nextInput.focus();
-                } else {
-                    document.getElementById('btnSalvar').click();
-                }
+                if (nextInput) nextInput.focus();
+                else document.getElementById('btnSalvar').click();
             }
         });
     });
 
-    // Funções de Cálculo
     function calcularDiferenca(inicio, fim) {
         const [h1, m1] = inicio.split(':').map(Number);
         const [h2, m2] = fim.split(':').map(Number);
@@ -153,10 +133,8 @@
         return "No horário (17:30)";
     }
 
-    // Salvar no Banco de Dados (Firestore)
     document.getElementById('formLimmbus').addEventListener('submit', async function(e) {
         e.preventDefault();
-        
         const dados = {
             nome: document.getElementById('nome').value,
             data: document.getElementById('data').value,
@@ -167,40 +145,60 @@
             obs: document.getElementById('descricao').value,
             timestamp: firebase.firestore.FieldValue.serverTimestamp()
         };
-
         try {
-            // Usa a coleção que você criou: registros_saida
             await db.collection("registros_saida").add(dados);
-            
             document.getElementById('msgSucesso').style.opacity = '1';
             setTimeout(() => { document.getElementById('msgSucesso').style.opacity = '0'; }, 2000);
-            
             this.reset();
             inputs[0].focus();
         } catch (error) {
-            console.error("Erro ao salvar:", error);
-            alert("Erro ao salvar no banco! Verifique as regras de segurança.");
+            alert("Erro ao salvar! Verifique as regras.");
         }
     });
 
-    // Abrir Tabela buscando dados da Nuvem
+    window.removerRegistro = async function(id, aba) {
+        const senha = prompt("Digite a senha para remover o registro:");
+        if (senha === "1979") {
+            try {
+                await db.collection("registros_saida").doc(id).delete();
+                aba.location.reload(); 
+            } catch (e) { alert("Erro ao deletar."); }
+        } else { alert("Senha incorreta!"); }
+    };
+
+    window.limparTudo = async function(aba) {
+        const senha = prompt("Deseja LIMPAR TUDO? Digite a senha:");
+        if (senha === "1979") {
+            try {
+                const snapshot = await db.collection("registros_saida").get();
+                const batch = db.batch();
+                snapshot.forEach(doc => batch.delete(doc.ref));
+                await batch.commit();
+                alert("Banco de dados limpo!");
+                aba.close(); 
+            } catch (e) { alert("Erro ao limpar banco."); }
+        } else { alert("Senha incorreta!"); }
+    };
+
     async function abrirTabela() {
         try {
             const snapshot = await db.collection("registros_saida").orderBy("timestamp", "desc").get();
             const novaAba = window.open("", "_blank");
-            
             let linhasHtml = "";
             snapshot.forEach(doc => {
                 const item = doc.data();
                 linhasHtml += `
-                    <tr style="border-bottom:1px solid #222;">
+                    <tr class="registro-row" style="border-bottom:1px solid #222;">
                         <td style="padding:12px;">${item.nome}</td>
                         <td style="padding:12px;">${item.data}</td>
                         <td style="padding:12px;">${item.entrada}</td>
                         <td style="padding:12px;">${item.saida}</td>
                         <td style="padding:12px; font-weight:bold;">${item.total}</td>
-                        <td style="padding:12px; color:#aaa;">${item.meta}</td>
+                        <td style="padding:12px;">${item.meta}</td>
                         <td style="padding:12px;">${item.obs || ""}</td>
+                        <td style="padding:12px;">
+                            <button onclick="window.opener.removerRegistro('${doc.id}', window)" style="background:#ff4d4d; color:white; border:none; padding:5px 10px; cursor:pointer; font-size:0.7rem;">Remover</button>
+                        </td>
                     </tr>`;
             });
 
@@ -208,26 +206,41 @@
                 <html>
                 <head><title>Log de Alterações - Cloud</title></head>
                 <body style="background:#0a0a0a; color:#fff; font-family:sans-serif; padding:50px; margin:0;">
-                    <h1 style="font-weight:300; border-bottom:2px solid #fff; padding-bottom:10px; text-transform:uppercase;">Log Global (Firebase)</h1>
-                    <table style="width:100%; border-collapse:collapse; margin-top:20px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:2px solid #fff; padding-bottom:10px; margin-bottom:20px;">
+                        <h1 style="font-weight:300; margin:0; text-transform:uppercase;">Log Global</h1>
+                        <button onclick="window.opener.limparTudo(window)" style="background:transparent; color:#ff4d4d; border:1px solid #ff4d4d; padding:10px; cursor:pointer; font-weight:bold;">Limpar Log Geral</button>
+                    </div>
+
+                    <input type="text" id="buscaLog" placeholder="Pesquisar por nome, data ou observação..." 
+                        style="width:100%; padding:15px; background:#1a1a1a; color:#fff; border:1px solid #333; margin-bottom:20px; outline:none;">
+
+                    <table id="tabelaDados" style="width:100%; border-collapse:collapse;">
                         <thead style="background:#1a1a1a; text-align:left;">
                             <tr>
                                 <th style="padding:15px;">Funcionário</th><th style="padding:15px;">Data</th><th style="padding:15px;">E</th>
                                 <th style="padding:15px;">S</th><th style="padding:15px;">Total</th><th style="padding:15px;">Saldo</th>
-                                <th style="padding:15px;">Obs</th>
+                                <th style="padding:15px;">Obs</th><th style="padding:15px;">Ação</th>
                             </tr>
                         </thead>
                         <tbody>${linhasHtml}</tbody>
                     </table>
-                    <p style="color:#444; margin-top:30px;">V 1.5.2 - Dados sincronizados via projeto-frutiger</p>
+
+                    <script>
+                        document.getElementById('buscaLog').addEventListener('keyup', function() {
+                            let filtro = this.value.toLowerCase();
+                            let linhas = document.querySelectorAll('.registro-row');
+                            
+                            linhas.forEach(linha => {
+                                let texto = linha.innerText.toLowerCase();
+                                linha.style.display = texto.includes(filtro) ? "" : "none";
+                            });
+                        });
+                    <\/script>
                 </body>
                 </html>
             `);
-        } catch (e) {
-            alert("Erro ao carregar log: " + e.message);
-        }
+        } catch (e) { alert("Erro ao carregar log."); }
     }
 </script>
-
 </body>
 </html>
