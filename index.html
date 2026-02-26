@@ -2,7 +2,7 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <title>Controle de Saída - V 1.5.4</title>
+    <title>Controle de Saída - V 1.5.5</title>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
     <style>
@@ -42,8 +42,6 @@
             color: #fff; outline: none;
         }
         input:focus, textarea:focus { border-color: #fff; }
-        .row { display: flex; gap: 15px; }
-        .row div { flex: 1; }
         button { 
             width: 100%; margin-top: 30px; padding: 15px; 
             background: #fff; color: #000; border: none; 
@@ -51,6 +49,8 @@
             text-transform: uppercase;
         }
         button:hover { background: #ccc; }
+        .row { display: flex; gap: 15px; }
+        .row div { flex: 1; }
         .status-msg { margin-top: 15px; font-size: 0.8rem; color: #2ecc71; opacity: 0; transition: 0.5s; height: 20px; text-align: center; }
         .link-tabela {
             margin-top: 20px;
@@ -103,6 +103,7 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
 
+    // Navegação Enter
     const inputs = document.querySelectorAll('.tab-input');
     inputs.forEach((input, index) => {
         input.addEventListener('keydown', (e) => {
@@ -151,40 +152,15 @@
             setTimeout(() => { document.getElementById('msgSucesso').style.opacity = '0'; }, 2000);
             this.reset();
             inputs[0].focus();
-        } catch (error) {
-            alert("Erro ao salvar! Verifique as regras.");
-        }
+        } catch (error) { alert("Erro ao salvar!"); }
     });
-
-    window.removerRegistro = async function(id, aba) {
-        const senha = prompt("Digite a senha para remover o registro:");
-        if (senha === "1979") {
-            try {
-                await db.collection("registros_saida").doc(id).delete();
-                aba.location.reload(); 
-            } catch (e) { alert("Erro ao deletar."); }
-        } else { alert("Senha incorreta!"); }
-    };
-
-    window.limparTudo = async function(aba) {
-        const senha = prompt("Deseja LIMPAR TUDO? Digite a senha:");
-        if (senha === "1979") {
-            try {
-                const snapshot = await db.collection("registros_saida").get();
-                const batch = db.batch();
-                snapshot.forEach(doc => batch.delete(doc.ref));
-                await batch.commit();
-                alert("Banco de dados limpo!");
-                aba.close(); 
-            } catch (e) { alert("Erro ao limpar banco."); }
-        } else { alert("Senha incorreta!"); }
-    };
 
     async function abrirTabela() {
         try {
             const snapshot = await db.collection("registros_saida").orderBy("timestamp", "desc").get();
             const novaAba = window.open("", "_blank");
             let linhasHtml = "";
+            
             snapshot.forEach(doc => {
                 const item = doc.data();
                 linhasHtml += `
@@ -197,24 +173,30 @@
                         <td style="padding:12px;">${item.meta}</td>
                         <td style="padding:12px;">${item.obs || ""}</td>
                         <td style="padding:12px;">
-                            <button onclick="window.opener.removerRegistro('${doc.id}', window)" style="background:#ff4d4d; color:white; border:none; padding:5px 10px; cursor:pointer; font-size:0.7rem;">Remover</button>
+                            <button onclick="removerRegistro('${doc.id}')" style="background:#ff4d4d; color:white; border:none; padding:5px 10px; cursor:pointer; font-size:0.7rem;">Remover</button>
                         </td>
                     </tr>`;
             });
 
+            const configString = JSON.stringify(firebaseConfig);
+
             novaAba.document.write(`
                 <html>
-                <head><title>Log de Alterações - Cloud</title></head>
+                <head>
+                    <title>Log Cloud - V 1.5.5</title>
+                    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"><\/script>
+                    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"><\/script>
+                </head>
                 <body style="background:#0a0a0a; color:#fff; font-family:sans-serif; padding:50px; margin:0;">
                     <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:2px solid #fff; padding-bottom:10px; margin-bottom:20px;">
                         <h1 style="font-weight:300; margin:0; text-transform:uppercase;">Log Global</h1>
-                        <button onclick="window.opener.limparTudo(window)" style="background:transparent; color:#ff4d4d; border:1px solid #ff4d4d; padding:10px; cursor:pointer; font-weight:bold;">Limpar Log Geral</button>
+                        <button onclick="limparTudo()" style="background:transparent; color:#ff4d4d; border:1px solid #ff4d4d; padding:10px; cursor:pointer; font-weight:bold;">Limpar Log Geral</button>
                     </div>
 
-                    <input type="text" id="buscaLog" placeholder="Pesquisar por nome, data ou observação..." 
+                    <input type="text" id="buscaLog" placeholder="Pesquisar..." 
                         style="width:100%; padding:15px; background:#1a1a1a; color:#fff; border:1px solid #333; margin-bottom:20px; outline:none;">
 
-                    <table id="tabelaDados" style="width:100%; border-collapse:collapse;">
+                    <table style="width:100%; border-collapse:collapse;">
                         <thead style="background:#1a1a1a; text-align:left;">
                             <tr>
                                 <th style="padding:15px;">Funcionário</th><th style="padding:15px;">Data</th><th style="padding:15px;">E</th>
@@ -226,13 +208,32 @@
                     </table>
 
                     <script>
+                        const firebaseConfig = ${configString};
+                        firebase.initializeApp(firebaseConfig);
+                        const db = firebase.firestore();
+
+                        async function removerRegistro(id) {
+                            if(prompt("Senha:") === "1979") {
+                                await db.collection("registros_saida").doc(id).delete();
+                                location.reload();
+                            } else { alert("Senha incorreta"); }
+                        }
+
+                        async function limparTudo() {
+                            if(prompt("Senha para LIMPAR TUDO:") === "1979") {
+                                const snap = await db.collection("registros_saida").get();
+                                const batch = db.batch();
+                                snap.forEach(doc => batch.delete(doc.ref));
+                                await batch.commit();
+                                alert("Banco limpo!");
+                                window.close();
+                            } else { alert("Senha incorreta"); }
+                        }
+
                         document.getElementById('buscaLog').addEventListener('keyup', function() {
-                            let filtro = this.value.toLowerCase();
-                            let linhas = document.querySelectorAll('.registro-row');
-                            
-                            linhas.forEach(linha => {
-                                let texto = linha.innerText.toLowerCase();
-                                linha.style.display = texto.includes(filtro) ? "" : "none";
+                            let f = this.value.toLowerCase();
+                            document.querySelectorAll('.registro-row').forEach(r => {
+                                r.style.display = r.innerText.toLowerCase().includes(f) ? "" : "none";
                             });
                         });
                     <\/script>
